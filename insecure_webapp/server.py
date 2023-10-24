@@ -4,6 +4,14 @@ from flask import Flask, abort, Response, request, jsonify
 import subprocess
 import hashlib
 
+ALLOWED_EXTENSIONS = {
+    ".html": "text/html",
+    ".css": "text/css",
+    ".js": "text/javascript",
+    ".svg": "image/svg+xml",
+    ".txt": "text/plain",
+}
+
 app = Flask(__name__, static_folder="")
 app.url_map.strict_slashes = False
 
@@ -22,6 +30,14 @@ PG_CONNECT_STRING = " ".join(
 
 print(PG_CONNECT_STRING)
 
+def secure_path(path):
+    """
+    Return a secure version of the path, or None if the path is insecure.
+    """
+    normalized_path = os.path.normpath(path)
+    if os.path.isabs(normalized_path) or normalized_path.startswith('..'):
+        return None
+    return normalized_path
 
 def run_query(query):
     try:
@@ -52,43 +68,44 @@ def get_comments_html():
     return "<br />\n".join(data)
 
 def send_file(path):
-    print("send_file path: " + path)
-    if path in ("index", "/", "/index", "/index.html", "index.html"):
+    print("send_file path:", path)
+
+    if path in {"index", "/", "/index", "/index.html", "index.html"}:
         with open("index.html", "r") as f:
             content = f.read()
             content = content.replace("Comments are loading...", get_comments_html())
             return Response(content, mimetype="text/html")
 
     if path.startswith("/static/"):
-        path = path[: -len("/static/")]
-    while path.endswith("/"):
-        path = path[:-1]
-    if path == "":
-        path = "."
-    print("processed path: " + path)
-    mimetype = "text/plain"
-    if path.endswith(".html"):
-        mimetype = "text/html"
-    if path.endswith(".css"):
-        mimetype = "text/css"
-    if path.endswith(".js"):
-        mimetype = "text/javascript"
-    if path.endswith(".svg"):
-        mimetype = "image/svg+xml"
+        path = path[len("/static/"):]
+
+    # Secure the path
+    path = secure_path(path)
+    if path is None:
+        abort(404)
+
+    # Check if path is a directory
+    if os.path.isdir(path):
+        paths = [os.path.join(path, x) for x in os.listdir(path)]
+        return Response("\n".join(paths), mimetype="text/plain")
+
+    # Determine mimetype based on file extension
+    ext = os.path.splitext(path)[1]
+    mimetype = ALLOWED_EXTENSIONS.get(ext, "text/plain")
+
     try:
         with open(path, "r") as f:
             return Response(f.read(), mimetype=mimetype)
-    except IsADirectoryError:
-        paths = [path + "/" + x for x in os.listdir(path)]
-        return Response("\n".join(paths), mimetype=mimetype)
-    except:
+    except FileNotFoundError:
         pass
+
     if not path.endswith(".html"):
         try:
             with open(path + ".html", "r") as f:
                 return Response(f.read(), mimetype="text/html")
-        except:
+        except FileNotFoundError:
             pass
+
     abort(404)
 
 
