@@ -49,19 +49,29 @@
       }
       return response.json();
     }
-    function submitLoginForm(event) {
-      const username = event.target[0].value;
-      const password = event.target[1].value;
-      const credentials = { username: username, password: password };
-      console.log(username);
-      console.log(password);
 
-      postData("/api/login", credentials).then((data) => {
+    function submitLoginForm(event) {
+    const username = event.target[0].value;
+    const password = event.target[1].value;
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!-\/:-@[-`{-~]).{8,}$/;
+
+    if (!passwordRegex.test(password)) {
+        document.getElementById("wrong_password").innerHTML =
+            "Password should contain at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character.";
+        return;
+    }
+
+    const credentials = { username: username, password: password };
+    console.log(username);
+    console.log(password);
+
+    postData("/api/login", credentials).then((data) => {
         console.log(data);
         if (data === null) {
-          document.getElementById("wrong_password").innerHTML =
-            "User already exists!";
-          return;
+            document.getElementById("wrong_password").innerHTML =
+                "User already exists!";
+            return;
         }
         // After successfully logging in, store the response details:
         document.cookie = "username=" + data["username"];
@@ -69,7 +79,7 @@
         document.cookie = "session=" + data["session"];
         // Go back to main page now that we are logged in:
         window.location = "/";
-      });
-    }
+    });
+}
   </script>
 </html>
