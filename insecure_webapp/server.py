@@ -97,7 +97,7 @@ def complete_login(username, password):
     # (username and password have already been verified)
 
     # Generate session token:
-    h = hashlib.new("md5")
+    h = hashlib.new("sha256")
     h.update(username.encode("utf-8"))
     h.update(password.encode("utf-8"))
     session = h.hexdigest()
