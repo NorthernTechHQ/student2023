@@ -51,7 +51,7 @@ def run_query(query):
             except (Exception, psycopg2.DatabaseError) as error:
                 return [str(error)]
     except (Exception, psycopg2.DatabaseError) as error:
-        return ["Conection failed", str(error)]
+        return ["Conection failed"]
     return None
 
 
